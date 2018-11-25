@@ -10,7 +10,7 @@ namespace Assets.Scripts
         public int line = 10;
         public double speed = 1;
 
-
+  
         // 레벨업! ----------------------------------------------------
         public void LevelUp()
         {
@@ -21,6 +21,7 @@ namespace Assets.Scripts
                 line = 10;
             }
         }
+
 
         // 점수 계산 --------------------------------------------------
         public void UpdateScore(int deleteLineNum)
