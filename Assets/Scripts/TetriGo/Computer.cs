@@ -119,7 +119,7 @@ namespace Assets.Scripts
                 }
             }
             // nextMino인 경우
-            else if (current == -1)
+            else if (current == 1)
             {
                 foreach (Transform mino in tetromino.transform)
                 {
@@ -185,10 +185,11 @@ namespace Assets.Scripts
         {
             // 밑으로 이동 후 위치 확인
             while (CheckPos(tempBoard, MoveY(pos, -1)));
-
             MoveY(pos, 1);
 
             return pos;
+
+            // return pos;
         }
 
         // 올바른 이동 확인
@@ -283,6 +284,7 @@ namespace Assets.Scripts
             int height = 0;
 
             // 라인 지우기 추가 예정
+            // DeleteLine(tempBoard);
 
             // 현재 블럭의 최고 높이 계산
             for (int i = 0; i < 4; i++)
@@ -394,6 +396,48 @@ namespace Assets.Scripts
             }
 
             return tempPos;
+        }
+
+        // 꽉찬 라인 지우기
+        void DeleteLine(bool[,] tempBoard)
+        {
+            for (int y=0; y<20; y++)
+            {
+                if (IsFullLine(tempBoard, y))
+                {
+                    AllLineDown(tempBoard, y+1);
+                    y--;
+                }
+            }
+        }
+
+        bool IsFullLine(bool[,] tempBoard, int y)
+        {
+            for (int x=0; x<10; x++)
+            {
+                if (tempBoard[x, y] == false)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        void LineDown(bool[,] tempBoard, int y)
+        {
+            for (int x = 0; x < 10; x++)
+            {
+                tempBoard[x, y-1] = tempBoard[x, y];
+            }
+        }
+
+        void AllLineDown(bool[,] tempBoard, int y)
+        {
+            for (int i = y; i<20; i++)
+            {
+                LineDown(tempBoard, i);
+            }
         }
 
         // 빈칸 개수 반환
