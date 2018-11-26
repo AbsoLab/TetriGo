@@ -21,7 +21,11 @@ namespace Assets.Scripts
                 line = 10;
             }
         }
-
+        public void ForceLevelUp()
+        {
+            level++;
+            speed *= 0.8;
+        }
 
         // 점수 계산 --------------------------------------------------
         public void UpdateScore(int deleteLineNum)

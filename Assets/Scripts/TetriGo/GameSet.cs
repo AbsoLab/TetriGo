@@ -25,7 +25,8 @@ public class GameSet : MonoBehaviour
 
     double time1 = 0;
     double time2 = 0;
-    double comMoveSpeed = 0;
+    double time3 = 0;
+    double comMoveSpeed = 0.3;
 
     public Text[] UI_1 = new Text[3];   // 플레이어1의 UI들
     public Text[] UI_2 = new Text[3];   // 플레이어2의 UI들
@@ -239,11 +240,11 @@ public class GameSet : MonoBehaviour
                 currentMino2.GetComponent<Tetromino>().MoveDown();
                 time2 = Time.time;
             }
-            else if (Time.time - comMoveSpeed >= 0.01)
+            else if (Time.time - time3 >= comMoveSpeed)
             {
                 computer.Move();
                 ghostMino2.GetComponent<GhostTetromino>().UpdatePosition();
-                comMoveSpeed = Time.time;
+                time3 = Time.time;
             }
             
         }
@@ -285,9 +286,41 @@ public class GameSet : MonoBehaviour
         {
             player[mode].UpdateScore(board[mode].deleteLineNum);
 
-            player[mode].LevelUp();
+            if (gameMode == 0)
+            {
+                player[mode].LevelUp();
+            }
+            else
+            {
+                // 대전모드일 땐 상대방 레벨이 올라간다.
+                if (mode == 0)
+                {
+                    if (player[0].line <= 0)
+                    {
+                        player[0].line = 10;
+                        player[1].ForceLevelUp();
 
-            UpdateUI(mode);
+                        board[1].AllLineUp();
+                        GameObject penalty = (GameObject)Instantiate(Resources.Load("Board/Penalty", typeof(GameObject)), new Vector2(30, 0), Quaternion.identity);
+                        board[1].AddPenalty(penalty.transform, 25);
+                    }
+                }
+                else
+                {
+                    if (player[1].line <= 0)
+                    {
+                        player[1].line = 10;
+                        player[0].ForceLevelUp();
+
+                        board[0].AllLineUp();
+                        GameObject penalty = (GameObject)Instantiate(Resources.Load("Board/Penalty", typeof(GameObject)), new Vector2(5, 0), Quaternion.identity);
+                        board[0].AddPenalty(penalty.transform, 0);
+                    }
+                }
+            }
+            
+
+            UpdateUI();
 
             board[mode].deleteLineNum = 0;
         }
@@ -295,21 +328,18 @@ public class GameSet : MonoBehaviour
 
 
     // UI 업데이트 ------------------------------------------------
-    public void UpdateUI(int mode)
+    public void UpdateUI()
     {
-        if (mode == 0)
-        {
-            UI_1[0].text = player[mode].score.ToString();
-            UI_1[1].text = player[mode].level.ToString();
-            UI_1[2].text = player[mode].line.ToString();
-        }
-        else
-        {
-            UI_2[0].text = player[mode].score.ToString();
-            UI_2[1].text = player[mode].level.ToString();
-            UI_2[2].text = player[mode].line.ToString();
-        }
+        UI_1[0].text = player[0].score.ToString();
+        UI_1[1].text = player[0].level.ToString();
+        UI_1[2].text = player[0].line.ToString();
         
+        if (player[1] != null)
+        {
+            UI_2[0].text = player[1].score.ToString();
+            UI_2[1].text = player[1].level.ToString();
+            UI_2[2].text = player[1].line.ToString();
+        }   
     }
 
 

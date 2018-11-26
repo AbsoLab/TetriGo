@@ -11,6 +11,7 @@ namespace Assets.Scripts
 
         public int deleteLineNum = 0;  // 한 번에 지운 라인의 수
 
+        int penaltyNum = 0;
 
         // 게임판에 블록 등록 -----------------------------------------
         public void AddMino(Transform transform, Vector2[] offsetPos)
@@ -27,7 +28,7 @@ namespace Assets.Scripts
         // 라인 지우기 -----------------------------------------------
         public void DeleteLine()
         {
-            for (int i = 0; i < 20; i++)
+            for (int i = penaltyNum; i < 20; i++)
             {
                 if (IsFullLine(i))
                 {
@@ -90,6 +91,36 @@ namespace Assets.Scripts
             }
         }
 
+
+        // 대전 모드 -------------------------------------------------
+        public void AddPenalty(Transform transform, int offset)
+        {
+            int i = 0;
+
+            foreach (Transform brick in transform)
+            {
+                Vector2 pos = Round(Round(brick.position));
+                board[(int)pos.x - offset, (int)pos.y] = brick;
+            }
+
+            penaltyNum++;
+        }
+
+        public void AllLineUp()
+        {
+            for(int y=18; y>=0; y--)
+            {
+                for(int x=0; x<10; x++)
+                {
+                    if (board[x, y] != null)
+                    {
+                        board[x, y + 1] = board[x, y];
+                        board[x, y + 1].position += new Vector3(0, 1, 0);
+                    }
+                    
+                }
+            }
+        }
 
         // 해당위치의 보드판의 상태를 반환 -----------------------------
         public bool GetBoardStats(Vector2 pos)
