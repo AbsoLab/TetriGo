@@ -6,10 +6,13 @@ namespace Assets.Scripts
 {
     class Model
     {
-        public int blank = 0;   // 빈칸 개수
-        public int height = 0;  // 놓으려는 블럭의 높이
+        public int blank;       // 빈칸 개수
+        public int height;         // 놓으려는 블럭의 높이
         public int move;        // 움직임 (2비트 단위)
-        public int distance;
+        public int distance;    // 중앙으로 부터의 거리
+        public int top;      // 게임판의 최대높이 - 최소높이
+
+        public int score;       // 이 모델의 점수
 
         public int[] debug = new int[10];
     }
@@ -27,6 +30,7 @@ namespace Assets.Scripts
         int count;           // 만들어진 모델의 개수
         int bestBlank;       // 최적 모델의 빈칸 개수
         int bestHeight;      // 최적 모델의 최대 높이
+        int bestScore;
 
         // 초기화
         public void SetComputer(bool[,] board, GameObject currentMino, GameObject nextMino)
@@ -36,8 +40,6 @@ namespace Assets.Scripts
             this.nextMino = nextMino;
 
             count = 0;
-            bestBlank = 999;
-            bestHeight = 999;
 
             Calculate();        // 경우의 수 계산
             SelectModel();      // 모델 선택
@@ -49,7 +51,14 @@ namespace Assets.Scripts
             int move = 0;
             int rotate = 0;
 
-            Vector2[] currentPos;
+            Vector2[] currentPos = TransMino(currentMino);
+
+            // 블럭이 생길 수 없을 때
+            if (!CheckPos(board, currentPos))
+            {
+                gameSet.GameOver(2);
+                return;
+            }
 
             // 회전 4번
             for (int i = 0; i < 4; i++)
@@ -57,17 +66,17 @@ namespace Assets.Scripts
                 // 좌측 탐색 (가운데 위치 포함)
                 move = rotate;
                 currentPos = TransMino(currentMino);
-
+                
                 do
                 {
                     // 게임판 복사
-                    bool[,] tempBoard = CopyBoard(board);       
+                    bool[,] tempBoard = CopyBoard(board);
 
                     // 테트로미노를 밑으로 내린 후 tempBoard에 더한다. 내린 테트로미노의 위치 반환
                     Vector2[] downPos = AddBoard(tempBoard, currentPos);
 
                     // 다음 테트로미노를 이용하여 모델 생성
-                    NextModel(tempBoard, downPos, move);        
+                    NextModel(tempBoard, downPos, move);
 
                     // 왼쪽으로 이동 추가 (2bit 왼쪽으로 shift 한 후 더한다)
                     move = SetMoveValue(move, 2);
@@ -188,8 +197,6 @@ namespace Assets.Scripts
             MoveY(pos, 1);
 
             return pos;
-
-            // return pos;
         }
 
         // 올바른 이동 확인
@@ -238,7 +245,14 @@ namespace Assets.Scripts
         // 모델 생성 ------------------------------------------------------------
         void NextModel(bool[,] tempBoard, Vector2[] currentPos, int move)
         {
-            Vector2[] nextPos;
+            Vector2[] nextPos = TransMino(nextMino, 1);
+
+            // 다음 블럭이 생길 수 없을 때
+            if (!CheckPos(tempBoard, nextPos))
+            {
+                MakeModel(tempBoard, currentPos, move);
+                return;
+            }
 
             for (int i = 0; i < 4; i++)
             {
@@ -249,10 +263,10 @@ namespace Assets.Scripts
                 {
                     bool[,] tempBoard2 = CopyBoard(tempBoard);
 
-                    Vector2[] downPos = AddBoard(tempBoard2, nextPos);
+                    AddBoard(tempBoard2, nextPos);
 
                     // 모델 생성
-                    MakeModel(tempBoard2, currentPos, downPos, move);
+                    MakeModel(tempBoard2, currentPos, move);
 
                 } while (CheckPos(tempBoard, MoveX(nextPos, -1)));
 
@@ -264,10 +278,10 @@ namespace Assets.Scripts
                 {
                     bool[,] tempBoard2 = CopyBoard(tempBoard);
 
-                    Vector2[] downPos = AddBoard(tempBoard2, nextPos);
+                    AddBoard(tempBoard2, nextPos);
 
                     // 모델 생성
-                    MakeModel(tempBoard2, currentPos, downPos, move);
+                    MakeModel(tempBoard2, currentPos, move);
                 }
 
                 // 회전
@@ -275,16 +289,19 @@ namespace Assets.Scripts
             }
         }
 
-        void MakeModel(bool[,] tempBoard, Vector2[] currentPos, Vector2[] nextPos, int move)
+        void MakeModel(bool[,] tempBoard, Vector2[] currentPos, int move)
         {
             Model newModel = new Model();
-            newModel.move = move;
-
             int blank = 0;
             int height = 0;
+            int top = 0;
+            int bottom = 20;
 
-            // 라인 지우기 추가 예정
-            // DeleteLine(tempBoard);
+            // 모델 값 넣기
+            newModel.move = move;
+            newModel.distance = GetDistance(currentPos);    // 거리 계산
+
+            DeleteLine(tempBoard, currentPos);     // 라인 지우기 
 
             // 현재 블럭의 최고 높이 계산
             for (int i = 0; i < 4; i++)
@@ -293,16 +310,11 @@ namespace Assets.Scripts
                 {
                     height = (int)currentPos[i].y;
                 }
-                if (height < nextPos[i].y)
-                {
-                    height = (int)nextPos[i].y;
-                }
             }
-
             height++;   // index + 1이 실제 높이
             newModel.height = height;
 
-            // 디버그용, 추후 삭제 예정
+            // 게임판의 최고 높이와 최저 높이 구하기
             for (int x = 0; x < 10; x++)
             {
                 int temp = 0;
@@ -313,8 +325,17 @@ namespace Assets.Scripts
                     {
                         temp = y + 1;
                     }
-                    newModel.debug[x] = temp;
+                    
                 }
+                if (temp > top)
+                {
+                    top = temp;
+                }
+                if (temp < bottom)
+                {
+                    bottom = temp;
+                }
+                    
             }
 
 
@@ -322,60 +343,28 @@ namespace Assets.Scripts
             blank = GetBlank(tempBoard) - GetBlank(board);
             newModel.blank = blank;
 
+            // 점수 계산
+            int score = 100;
 
-            // 거리 계산
-            newModel.distance = GetDistance(currentPos);
+            score -= blank*2;
+            score -= height;
+            score -= top - bottom;
 
+            newModel.score = score;
 
-            // 최적 모델 탐색
             if (count == 0)
             {
                 ChangeModel(newModel);
             }
-            else if (blank == 0)
+            else if (score > bestScore)
             {
-                if (bestBlank != 0)
-                {
-                    ChangeModel(newModel);
-                }
-                else if (bestBlank == 0)
-                {
-                    if (height < bestHeight)
-                    {
-                        ChangeModel(newModel);
-                    }
-                    else if (height == bestHeight)
-                    {
-                        model[count++] = newModel;
-                    }
-                }
+                ChangeModel(newModel);
             }
-            else if (height < bestHeight)
+            else if (score == bestScore)
             {
-                if (blank <= bestBlank)
-                {
-                    ChangeModel(newModel);
-                }
-                else
-                {
-                    newModel = null;    // 나중에 제거
-                }
+                model[count++] = newModel;
             }
-            else if (height == bestHeight)
-            {
-                if (blank < bestBlank)
-                {
-                    ChangeModel(newModel);
-                }
-                else if (blank == bestBlank)
-                {
-                    model[count++] = newModel;
-                }
-                else
-                {
-                    newModel = null;
-                }
-            }
+            
         }
 
         // 게임판에 블럭 등록
@@ -399,14 +388,27 @@ namespace Assets.Scripts
         }
 
         // 꽉찬 라인 지우기
-        void DeleteLine(bool[,] tempBoard)
+        void DeleteLine(bool[,] tempBoard, Vector2[] currentPos)
         {
             for (int y=0; y<20; y++)
             {
                 if (IsFullLine(tempBoard, y))
                 {
-                    AllLineDown(tempBoard, y+1);
+                    DeleteMino(currentPos, y);
+                    AllLineDown(tempBoard, currentPos, y+1);
                     y--;
+                }
+            }
+        }
+
+        void DeleteMino(Vector2[] currentPos, int y)
+        {
+            for (int i=0; i<4; i++)
+            {
+                if (currentPos[i].y == y)
+                {
+                    currentPos[i].x = -1;
+                    currentPos[i].y = -1;
                 }
             }
         }
@@ -424,19 +426,27 @@ namespace Assets.Scripts
             return true;
         }
 
-        void LineDown(bool[,] tempBoard, int y)
+        void LineDown(bool[,] tempBoard, Vector2[] currentPos, int y)
         {
             for (int x = 0; x < 10; x++)
             {
+                for (int i=0; i<4; i++)
+                {
+                    if (currentPos[i].y >= y)
+                    {
+                        currentPos[i].y--;
+                    }
+                }
+
                 tempBoard[x, y-1] = tempBoard[x, y];
             }
         }
 
-        void AllLineDown(bool[,] tempBoard, int y)
+        void AllLineDown(bool[,] tempBoard, Vector2[] currentPos, int y)
         {
             for (int i = y; i<20; i++)
             {
-                LineDown(tempBoard, i);
+                LineDown(tempBoard, currentPos, i);
             }
         }
 
@@ -472,6 +482,7 @@ namespace Assets.Scripts
             model[count++] = newModel;
             bestBlank = newModel.blank;
             bestHeight = newModel.height;
+            bestScore = newModel.score;
         }
 
         // 모델 선택 -----------------------------------------------------------
@@ -490,7 +501,7 @@ namespace Assets.Scripts
                 }
             }
 
-            selectedMove = ChangeMove(model[select].move);
+            selectedMove = ReverseMove(model[select].move);
         }
 
         // 가운데로 부터 얼마나 떨어져있는지 반환
@@ -523,6 +534,8 @@ namespace Assets.Scripts
             return x;
         }
 
+
+        // 테트로미노를 move에 저장된 값에 따라 움직인다.
         public void Move()
         {
             int move = selectedMove % 4;
@@ -546,7 +559,8 @@ namespace Assets.Scripts
             }
         }
 
-        int ChangeMove(int move)
+        // move값 순서 변경
+        int ReverseMove(int move)
         {
             int[] temp = new int[10];
             int index = 0;

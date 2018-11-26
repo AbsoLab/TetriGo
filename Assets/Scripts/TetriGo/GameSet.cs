@@ -72,6 +72,9 @@ public class GameSet : MonoBehaviour
             currentMino1.GetComponent<Tetromino>().SetSetting(this, 0);
 
             SpawnNextMino(mode);
+
+            // 고스트 생성
+            SpawnGhostMino(mode);
         }
         // 오른쪽 플레이어
         else
@@ -83,14 +86,14 @@ public class GameSet : MonoBehaviour
 
             SpawnNextMino(mode);
 
-            if(gameMode == 2)
+            // 고스트 생성
+            SpawnGhostMino(mode);
+
+            if (gameMode == 2)
             {
                 computer.SetComputer(board[1].GetBoardBoolType(), currentMino2, nextMino2);
             }
-        }
-
-        // 고스트 생성
-        SpawnGhostMino(mode);
+        }        
     }
     
     string GetRandomName()
@@ -236,7 +239,7 @@ public class GameSet : MonoBehaviour
                 currentMino2.GetComponent<Tetromino>().MoveDown();
                 time2 = Time.time;
             }
-            else if (Time.time - comMoveSpeed >= 0.35)
+            else if (Time.time - comMoveSpeed >= 0.01)
             {
                 computer.Move();
                 ghostMino2.GetComponent<GhostTetromino>().UpdatePosition();
